@@ -315,8 +315,15 @@ class Configuration(object):
             if not cxx:
                 self.lit_config.fatal('must specify user parameter cxx_under_test '
                                       '(e.g., --param=cxx_under_test=clang++)')
-            self.cxx = CXXCompiler(cxx, cxx_first_arg) if not self.cxx_is_clang_cl else \
-                       self._configure_clang_cl(cxx)
+            if self.cxx_is_clang_cl:
+                self.cxx = self._configure_clang_cl(cxx)
+            else:
+                self.cxx = CXXCompiler(
+                    cxx, 
+                    cxx_first_arg,
+                    compile_flags=self.get_lit_conf("cmake_cxx_flags"),
+                    cuda_path= self.get_lit_conf('cuda_path'),
+                )
             cxx_type = self.cxx.type
             if cxx_type is not None:
                 assert self.cxx.version is not None
@@ -724,7 +731,6 @@ class Configuration(object):
 
         if nvcc_host_compiler and self.cxx.type == 'nvcc':
             self.cxx.compile_flags += ['-ccbin={0}'.format(nvcc_host_compiler)]
-
         # Try and get the std version from the command line. Fall back to
         # default given in lit.site.cfg is not present. If default is not
         # present then force c++11.
